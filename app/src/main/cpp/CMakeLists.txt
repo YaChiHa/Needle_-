@@ -3,7 +3,7 @@ project(needle_jni LANGUAGES C CXX)
 
 add_library(needle_engine STATIC IMPORTED)
 set_target_properties(needle_engine PROPERTIES
-    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../../libs/arm64-v8a/libneedle.a"
+    IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/arm64-v8a/libneedle.a"
 )
 
 add_library(needle_jni SHARED native-lib.cpp)
