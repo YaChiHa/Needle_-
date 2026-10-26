@@ -27,7 +27,7 @@ Java_com_yachiha_needleandroid_NeedleNative_initialize(JNIEnv* env, jclass, jbyt
     }
 
     const int load_rc = needle_load(bytes.data(), static_cast<unsigned long long>(bytes.size()));
-    if (load_rc != 0) {
+    if (load_rc < 0) {
         LOGE("needle_load failed: %d", load_rc);
         return env->NewStringUTF(("ERROR: Needle model load failed (" + std::to_string(load_rc) + ")").c_str());
     }
