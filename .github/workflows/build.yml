@@ -1,0 +1,82 @@
+name: Build Needle Android APK
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build and inspect ARM64 APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.9"
+
+      - name: Set up Android SDK, NDK and CMake
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build packages
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.0.12077973" "cmake;3.22.1"
+
+      - name: Fetch pinned official Needle engine and model
+        shell: bash
+        run: |
+          set -euo pipefail
+          REV="d6c7d6a2e9655505e0f8e23339356dd1705900eb"
+          BASE="https://huggingface.co/Cactus-Compute/needle3/resolve/${REV}"
+          mkdir -p app/libs/arm64-v8a app/src/main/assets app/src/main/cpp/include
+          curl --fail --location --retry 3 --retry-all-errors "${BASE}/android-arm64/libneedle.a" -o app/libs/arm64-v8a/libneedle.a
+          curl --fail --location --retry 3 --retry-all-errors "${BASE}/android-arm64/needle.h" -o app/src/main/cpp/include/needle.h
+          curl --fail --location --retry 3 --retry-all-errors "${BASE}/needle3.cact" -o app/src/main/assets/needle3.cact
+          test "$(stat -c%s app/libs/arm64-v8a/libneedle.a)" -gt 100000
+          test "$(stat -c%s app/src/main/assets/needle3.cact)" -gt 1000000
+          file app/libs/arm64-v8a/libneedle.a app/src/main/assets/needle3.cact
+
+      - name: Verify C API header matches wrapper
+        run: |
+          grep -q 'needle_init' app/src/main/cpp/include/needle.h
+          grep -q 'needle_load' app/src/main/cpp/include/needle.h
+          grep -q 'needle_complete' app/src/main/cpp/include/needle.h
+
+      - name: Build debug APK
+        run: gradle --no-daemon --stacktrace assembleDebug
+
+      - name: Inspect APK and native library
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          unzip -l "$APK" | grep -q 'assets/needle3.cact'
+          unzip -l "$APK" | grep -q 'lib/arm64-v8a/libneedle_jni.so'
+          unzip -l "$APK" | grep -q 'classes.dex'
+          "$ANDROID_HOME/build-tools/35.0.0/aapt" dump badging "$APK" | grep -q "package: name='com.yachiha.needleandroid'"
+          echo "APK structure checks passed."
+          ls -lh "$APK"
+
+      - name: Upload installable debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Needle-Android-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 14
