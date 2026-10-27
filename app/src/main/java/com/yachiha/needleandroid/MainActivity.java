@@ -133,12 +133,13 @@ public class MainActivity extends Activity {
         status.setText("Running locally…");
         output.setText("Processing…");
         worker.execute(() -> {
-            final String result;
+            String result;
             try { result = NeedleNative.complete(prompt); }
             catch (Throwable t) { result = "ERROR: " + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage()); }
+            final String finalResult = result;
             main.post(() -> {
                 if (closed) return;
-                output.setText(result);
+                output.setText(finalResult);
                 status.setText(NeedleNative.isReady() ? "Needle ready • local inference" : "Needle unavailable");
                 send.setEnabled(NeedleNative.isReady());
             });
