@@ -1,0 +1,25 @@
+[
+  {
+    "name": "get_current_time",
+    "description": "Return the current local time on this device. This tool is only a proposal and must not be executed by the model runtime.",
+    "parameters": {
+      "type": "object",
+      "properties": {},
+      "required": []
+    }
+  },
+  {
+    "name": "calculate",
+    "description": "Propose a basic arithmetic expression using numbers, + - * / and parentheses. The caller validates and evaluates it separately.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "expression": {
+          "type": "string",
+          "description": "Arithmetic expression using numbers and + - * / parentheses"
+        }
+      },
+      "required": ["expression"]
+    }
+  }
+]
