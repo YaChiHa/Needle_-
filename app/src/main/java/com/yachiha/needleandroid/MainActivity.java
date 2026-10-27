@@ -160,13 +160,14 @@ public class MainActivity extends Activity {
             return;
         }
         final String remoteUrl = cloudUrl.getText().toString().trim();
+        final String remoteToken = cloudToken.getText().toString().trim();
         final boolean useCloud = !remoteUrl.isEmpty();
         send.setEnabled(false);
         status.setText(useCloud ? "Sending to your Needle cloud server…" : "Running locally…");
         output.setText("Processing…");
         worker.execute(() -> {
             String result;
-            try { result = useCloud ? completeCloud(prompt, remoteUrl) : NeedleNative.complete(prompt); }
+            try { result = useCloud ? completeCloud(prompt, remoteUrl, remoteToken) : NeedleNative.complete(prompt); }
             catch (Throwable t) { result = "ERROR: " + t.getClass().getSimpleName() + ": " + String.valueOf(t.getMessage()); }
             final String finalResult = result;
             main.post(() -> {
@@ -183,7 +184,7 @@ public class MainActivity extends Activity {
         return cloudUrl != null && !cloudUrl.getText().toString().trim().isEmpty();
     }
 
-    private String completeCloud(String prompt, String baseUrl) throws Exception {
+    private String completeCloud(String prompt, String baseUrl, String token) throws Exception {
         String endpoint = baseUrl.trim();
         if (!endpoint.startsWith("https://")) {
             throw new IOException("Use an HTTPS URL for the cloud server to protect your token.");
@@ -200,7 +201,6 @@ public class MainActivity extends Activity {
         connection.setDoOutput(true);
         connection.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         connection.setRequestProperty("Accept", "application/json");
-        String token = cloudToken.getText().toString().trim();
         if (!token.isEmpty()) connection.setRequestProperty("Authorization", "Bearer " + token);
 
         byte[] body = new JSONObject().put("input", prompt).toString().getBytes(StandardCharsets.UTF_8);
