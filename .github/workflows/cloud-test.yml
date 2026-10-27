@@ -1,0 +1,68 @@
+name: Test Needle Cloud Server
+
+on:
+  push:
+    branches:
+      - main
+      - "feature/**"
+    paths:
+      - "cloud/**"
+      - ".github/workflows/cloud-test.yml"
+  pull_request:
+    paths:
+      - "cloud/**"
+      - ".github/workflows/cloud-test.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  cloud-smoke-test:
+    name: Build and smoke-test Needle cloud container
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+
+      - name: Build cloud container
+        run: docker build --pull --tag needle-cloud-test --file cloud/Dockerfile .
+
+      - name: Start container
+        run: |
+          docker run --detach --name needle-cloud-test \
+            --publish 8000:8000 \
+            --env PORT=8000 \
+            --env NEEDLE_SERVER_TOKEN=ci-test-token \
+            needle-cloud-test
+
+      - name: Wait for Needle server and test inference
+        shell: bash
+        run: |
+          set -euo pipefail
+          ready=0
+          for _ in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:8000/health; then
+              ready=1
+              break
+            fi
+            sleep 2
+          done
+          test "$ready" = "1"
+          curl --fail --silent --show-error \
+            --max-time 100 \
+            --request POST http://127.0.0.1:8000/complete \
+            --header "Authorization: Bearer ci-test-token" \
+            --header "Content-Type: application/json" \
+            --data '{"input":"Calculate 12 * 8"}' \
+            --output /tmp/needle-response.json
+          python3 -c 'import json; p="/tmp/needle-response.json"; d=json.load(open(p)); print("Needle cloud inference returned valid JSON:", json.dumps(d)[:1000])'
+
+      - name: Show container logs if a step failed
+        if: failure()
+        run: docker logs needle-cloud-test || true
+
+      - name: Stop container
+        if: always()
+        run: docker rm --force needle-cloud-test || true
