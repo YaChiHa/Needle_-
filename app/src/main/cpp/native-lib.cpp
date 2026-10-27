@@ -53,7 +53,7 @@ Java_com_yachiha_needleandroid_NeedleNative_complete(JNIEnv* env, jclass, jstrin
 
     constexpr int capacity = 65536;
     std::vector<char> output(capacity, '\0');
-    const int rc = needle_complete(input, 256, output.data(), capacity);
+    const int rc = needle_complete(input, nullptr, 0, 256, output.data(), capacity);
     env->ReleaseStringUTFChars(prompt, input);
     if (rc < 0) return env->NewStringUTF(("ERROR: Needle inference failed (" + std::to_string(rc) + ")").c_str());
     output.back() = '\0';
