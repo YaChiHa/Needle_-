@@ -14,8 +14,8 @@ RUN curl --fail --location --retry 3 "https://huggingface.co/Cactus-Compute/need
     && curl --fail --location --retry 3 "https://huggingface.co/Cactus-Compute/needle3/resolve/${NEEDLE_REV}/needle3.cact" -o /opt/needle/needle3.cact \
     && chmod 0755 /opt/needle/needle
 
-COPY tools.json /opt/needle/tools.json
-COPY server.py /opt/needle/server.py
+COPY cloud/tools.json /opt/needle/tools.json
+COPY cloud/server.py /opt/needle/server.py
 
 EXPOSE 8000
 CMD ["python3", "/opt/needle/server.py"]
